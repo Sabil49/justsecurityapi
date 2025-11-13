@@ -1,0 +1,145 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  password            String
+  name                String
+  isPremium           Boolean   @default(false)
+  subscriptionExpiry  DateTime?
+  totalScans          Int       @default(0)
+  totalThreatsBlocked Int       @default(0)
+  lastScanDate        DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  scanLogs          ScanLog[]
+  vpnSessions       VPNSession[]
+  deviceLocations   DeviceLocation[]
+  subscriptions     Subscription[]
+  antiTheftCommands AntiTheftCommand[] // One user → many commands
+  devices           Device[]
+  auditLogs         AuditLog[]
+  telemetryLogs     TelemetryLog[]
+}
+
+model ScanLog {
+  id           String   @id @default(uuid())
+  userId       String
+  deviceId     String
+  scanType     String
+  threatsFound Int
+  filesScanned Int
+  duration     Int
+  timestamp    DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device       Device   @relation(fields: [deviceId], references: [id])
+
+  @@index([userId])
+  @@index([deviceId])
+}
+
+model VPNSession {
+  id             String    @id @default(uuid())
+  userId         String
+  serverLocation String
+  connectedAt    DateTime
+  disconnectedAt DateTime?
+  isActive       Boolean   @default(true)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DeviceLocation {
+  id        String   @id @default(uuid())
+  userId    String
+  deviceId  String
+  latitude  Float
+  longitude Float
+  timestamp DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device    Device   @relation(fields: [deviceId], references: [id])
+
+  @@index([userId, deviceId])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String
+  planId    String
+  status    SubscriptionStatus
+  startDate DateTime
+  endDate   DateTime
+  amount    Float
+  currency  String
+  receipt   String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Device {
+  id                String             @id @default(cuid())
+  name              String
+  ownerId           String
+  owner             User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  antiTheftCommands AntiTheftCommand[] // One device → many commands
+  auditLogs         AuditLog[]
+  telemetryLogs     TelemetryLog[]
+  scanLogs          ScanLog[]
+  deviceLocations   DeviceLocation[]
+}
+
+model AntiTheftCommand {
+  id          String   @id @default(cuid()) // Unique command ID
+  userId      String
+  deviceId    String
+  commandType String
+  commandData Json
+  executedAt  DateTime @default(now())
+
+  // 🔗 Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  deviceId  String?
+  action    String
+  details   Json? // Optional extra info (like IP, reason, metadata)
+  timestamp DateTime @default(now())
+
+  // 🔗 Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+}
+
+model TelemetryLog {
+  id        String   @id @default(cuid())
+  userId    String
+  deviceId  String?
+  eventType String
+  eventData Json
+  timestamp DateTime @default(now())
+
+  // 🔗 Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+}
