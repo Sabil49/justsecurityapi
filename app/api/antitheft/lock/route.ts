@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     // Verify device ownership
     const device = await prisma.device.findFirst({
-      where: { id: deviceId, owner: user.id }
+      where: { id: deviceId, ownerId: user.id }
     });
     
     if (!device) {
