@@ -32,8 +32,7 @@ export async function POST(req: NextRequest) {
         deviceId,
         commandType: 'lock',
         commandData: { message: encryptedMessage },
-        createdAt: new Date(),
-        executedAt: null,
+        executedAt: new Date()
       },
     });
 
