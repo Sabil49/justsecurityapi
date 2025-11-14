@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
-export default async function POST(req: NextRequest) {
+export async function POST(req: NextRequest) {
   const res = NextResponse;
 
   try {

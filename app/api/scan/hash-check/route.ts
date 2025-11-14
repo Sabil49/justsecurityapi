@@ -3,7 +3,7 @@ import { verifyToken } from '@/lib/auth';
 import { checkThreatDatabase } from '@/lib/threatIntelligence';
 
 
-export default async function POST(req: NextRequest) {
+export async function POST(req: NextRequest) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
   }
