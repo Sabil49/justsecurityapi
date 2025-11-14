@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         deviceId,
         commandType: 'ring',
+        commandData: {},
         executedAt: new Date(),
       },
     });
