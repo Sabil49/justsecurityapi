@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         deviceId,
         commandType: 'wipe',
+        commandData: {},
         executedAt: new Date(),
       },
     });
