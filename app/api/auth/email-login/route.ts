@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         deviceId: validated.deviceInfo.deviceId,
         deviceName: validated.deviceInfo.deviceName,
-        platform: validated.deviceInfo.platform as 'IOS' | 'ANDROID',
+        platform: validated.deviceInfo.platform.toUpperCase(),
         osVersion: validated.deviceInfo.osVersion,
         appVersion: validated.deviceInfo.appVersion,
       },
