@@ -35,7 +35,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthUser> {
   if (!token) {
     throw new Error("Missing token");
   }
-
+  console.log("Verifying token:", token);
   try {
     const decoded = verify(token, JWT_SECRET as string) as unknown as AuthUser;
     return decoded;
