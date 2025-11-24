@@ -162,7 +162,8 @@ export async function POST(request: NextRequest) {
   JWT_SECRET,
   { expiresIn: '30d' }
 );
-
+console.log('Generated JWT Token:', token);
+console.log('Generated Refresh Token:', refreshToken);
     // Log telemetry
     await prisma.telemetryLog.create({
       data: {
