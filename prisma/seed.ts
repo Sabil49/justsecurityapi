@@ -1,16 +1,5 @@
-// prisma/seed.ts
-import {
-  PrismaClient,
-  UserRole,
-  Platform,
-  ThreatSeverity,
-  ThreatType,
-  ThreatCategory,
-  QuarantineStatus,
-  AntiTheftCommandType,
-  CommandStatus,
-  AdminAction,
-} from "@prisma/client";
+import { PrismaClient, UserRole, ThreatType, Platform, ThreatSeverity, ThreatCategory, QuarantineStatus, AntiTheftCommandType, CommandStatus, AdminAction } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -19,37 +8,51 @@ async function main() {
 
   /**
    * ===========================
-   * 1. CREATE ADMIN USER
+   * 1. CREATE SUPERADMIN
    * ===========================
    */
-  const admin = await prisma.user.create({
-    data: {
-      id: "admin-001",
+  const password = "Admin@123";
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@example.com" },
+    update: {},
+    create: {
+      id: "superadmin-1",
       email: "admin@example.com",
-      name: "System Admin",
-      authProvider: "google",
-      authProviderId: "google-admin-id",
+      name: "Super Administrator",
       role: UserRole.SUPERADMIN,
-    },
+
+      authProvider: "credentials",
+      authProviderId: null,
+      passwordHash: hashedPassword,
+    }
   });
-  console.log(`✔ Admin user created: ${admin.email}`);
+  console.log(`✔ SUPERADMIN created: ${admin.email}`);
+
 
   /**
    * ===========================
-   * 2. CREATE REGULAR TEST USER
+   * 2. CREATE A NORMAL USER
    * ===========================
    */
-  const user = await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: { email: "user@example.com" },
+    update: {},
+    create: {
       id: "user-001",
       email: "user@example.com",
       name: "Test User",
+      role: UserRole.USER,
+
       authProvider: "google",
       authProviderId: "google-user-id",
-      role: UserRole.USER,
-    },
+      passwordHash: null
+    }
   });
-  console.log(`✔ Test user created: ${user.email}`);
+  console.log(`✔ User created: ${user.email}`);
+
+
 
   /**
    * ===========================
@@ -60,13 +63,14 @@ async function main() {
     data: {
       userId: user.id,
       deviceId: "device-001",
-      deviceName: "Pixel 8 Pro",
+      deviceName: "Pixel 9 Pro",
       platform: Platform.ANDROID,
       osVersion: "14.0",
       appVersion: "1.0.0",
-    },
+    }
   });
   console.log(`✔ Device created: ${device.deviceName}`);
+
 
   /**
    * ===========================
@@ -78,9 +82,10 @@ async function main() {
       deviceId: device.id,
       token: "push-token-xyz",
       platform: "android",
-    },
+    }
   });
-  console.log("✔ Push token created");
+  console.log("✔ PushToken created");
+
 
   /**
    * ===========================
@@ -94,22 +99,26 @@ async function main() {
       threatName: "Trojan.Android.Generic",
       severity: ThreatSeverity.CRITICAL,
       category: ThreatCategory.TROJAN,
-      description: "Highly dangerous malware targeting Android users.",
-    },
+      description: "Highly dangerous malware targeting Android devices.",
+      metadata: { info: "initial seed" }
+    }
   });
 
   const threatSignature2 = await prisma.threatSignature.create({
     data: {
       type: ThreatType.PACKAGE,
-      signature: "com.fake.app",
-      threatName: "Android.Adware.Popup",
+      signature: "com.fake.adware",
+      threatName: "Android.Popup.Adware",
       severity: ThreatSeverity.MEDIUM,
       category: ThreatCategory.ADWARE,
-      description: "Annoying popup adware application.",
-    },
+      description: "Annoying popup adware.",
+      metadata: null
+    }
   });
 
   console.log("✔ Threat signatures created");
+
+
 
   /**
    * ===========================
@@ -121,18 +130,18 @@ async function main() {
       deviceId: device.id,
       scanType: "full",
       status: "completed",
-      filesScanned: 1520,
+      filesScanned: 1220,
       threatsFound: 1,
       startedAt: new Date(),
       completedAt: new Date(),
-      duration: 3000,
-      metadata: {
-        details: "Full device scan completed",
-      },
-    },
+      duration: 2000,
+      metadata: { details: "Scan completed successfully" }
+    }
   });
 
   console.log("✔ ScanLog created");
+
+
 
   /**
    * ===========================
@@ -144,22 +153,28 @@ async function main() {
       deviceId: device.id,
       fileName: "malware.apk",
       filePath: "/storage/emulated/0/Download/malware.apk",
-      fileSize: 2048,
-      fileHash: "deadbeefdeadbeefdeadbeefdeadbeef",
+      fileSize: 4024,
+      fileHash: "deadbeefcafebabef00df00df00df00d",
       severity: ThreatSeverity.HIGH,
       status: QuarantineStatus.QUARANTINED,
+
       threatSignatureId: threatSignature1.id,
+
       storageKey: "quarantine/malware.apk",
-      storageUrl: "https://storage.example.com/quarantine/malware.apk",
+      storageUrl: "https://storage.example.com/malware.apk",
       uploadStatus: "uploaded",
-    },
+
+      metadata: { quarantineReason: "Detected trojan" }
+    }
   });
 
-  console.log("✔ Quarantine sample created");
+  console.log("✔ Quarantine item created");
+
+
 
   /**
    * ===========================
-   * 8. CREATE ANTI-THEFT COMMAND
+   * 8. ANTI-THEFT COMMAND
    * ===========================
    */
   await prisma.antiTheftCommand.create({
@@ -168,15 +183,16 @@ async function main() {
       commandType: AntiTheftCommandType.LOCATE,
       status: CommandStatus.PENDING,
       issuedBy: admin.id,
-      metadata: { reason: "Security test" },
-    },
+      metadata: { reason: "Security test" }
+    }
   });
-
   console.log("✔ Anti-theft command created");
+
+
 
   /**
    * ===========================
-   * 9. CREATE SUBSCRIPTION
+   * 9. SUBSCRIPTION
    * ===========================
    */
   await prisma.subscription.create({
@@ -186,11 +202,12 @@ async function main() {
       status: "active",
       platform: "android",
       currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    }
   });
-
   console.log("✔ Subscription created");
+
+
 
   /**
    * ===========================
@@ -201,14 +218,12 @@ async function main() {
     data: {
       userId: user.id,
       eventType: "scan_completed",
-      eventData: {
-        files: 1520,
-        threats: 1,
-      },
-    },
+      eventData: { scanned: 1220, threats: 1 }
+    }
   });
+  console.log("✔ TelemetryLog created");
 
-  console.log("✔ Telemetry log created");
+
 
   /**
    * ===========================
@@ -220,22 +235,23 @@ async function main() {
       adminId: admin.id,
       action: AdminAction.THREAT_UPLOAD,
       targetId: threatSignature1.id,
-      metadata: { note: "Initial malware DB population" },
-      ipAddress: "127.0.0.1",
-    },
+      metadata: { note: "Initial malware DB import" },
+      ipAddress: "127.0.0.1"
+    }
   });
 
-  console.log("✔ Admin audit log created");
+  console.log("✔ AdminAuditLog created");
+
 
   console.log("🎉 Database seeding complete!");
 }
 
+
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (err) => {
-    console.error("❌ Seed failed:", err);
-    await prisma.$disconnect();
+  .catch((e) => {
+    console.error("❌ Seed error:", e);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

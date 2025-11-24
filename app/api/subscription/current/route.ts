@@ -7,6 +7,16 @@ export async function GET(request: NextRequest) {
   try {
     // Verify authentication
     const user = await verifyAuth(request);
+    if (!user) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Unauthorized' 
+        }, 
+        { status: 401 }
+      );
+    }
+
 
     // Get user's current active subscription
     const subscription = await prisma.subscription.findFirst({
