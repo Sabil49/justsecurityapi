@@ -20,7 +20,7 @@ const EmailRegisterSchema = z.object({
   deviceInfo: z.object({
     deviceId: z.string(),
     deviceName: z.string(),
-    platform: z.enum(['ios', 'android']),
+    platform: z.enum(['ANDROID']),
     osVersion: z.string(),
     appVersion: z.string(),
   }),
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           deviceId: validated.deviceInfo.deviceId,
           deviceName: validated.deviceInfo.deviceName,
-          platform: validated.deviceInfo.platform as 'IOS' | 'ANDROID',
+          platform: validated.deviceInfo.platform as 'ANDROID',
           osVersion: validated.deviceInfo.osVersion,
           appVersion: validated.deviceInfo.appVersion,
         },
