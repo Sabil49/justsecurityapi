@@ -145,24 +145,23 @@ export async function POST(request: NextRequest) {
 
     // Create JWT token
     const token = sign(
-      {
-        userId: user.id,
-        email: user.email,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days expiration
-      },
-      JWT_SECRET
-    );
+  {
+    userId: user.id,
+    email: user.email,
+  },
+  JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
     //create refresh token
     const refreshToken = sign(
-      {
-        userId: user.id,
-        email: user.email,
-      },
-      JWT_SECRET,
-      { expiresIn: '30d' }
-    );
+  {
+    userId: user.id,
+    email: user.email,
+  },
+  JWT_SECRET,
+  { expiresIn: '30d' }
+);
 
     // Log telemetry
     await prisma.telemetryLog.create({
