@@ -148,6 +148,8 @@ export async function POST(request: NextRequest) {
       {
         userId: user.id,
         email: user.email,
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days expiration
       },
       JWT_SECRET,
       { expiresIn: '7d' }

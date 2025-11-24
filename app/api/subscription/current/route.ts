@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
           userId: user.userId,
           tier: 'free',
           status: 'active',
-          platform: 'android', // Default, should be from device
+          platform: 'ANDROID', // Default, should be from device
           currentPeriodStart: new Date(),
           currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
         },
