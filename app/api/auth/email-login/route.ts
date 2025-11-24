@@ -151,8 +151,7 @@ export async function POST(request: NextRequest) {
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days expiration
       },
-      JWT_SECRET,
-      { expiresIn: '7d' }
+      JWT_SECRET
     );
 
     //create refresh token
