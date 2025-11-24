@@ -14,19 +14,34 @@ export interface AuthUser {
 }
 
 export async function verifyAuth(request: NextRequest): Promise<AuthUser> {
-  const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new Error('Missing or invalid authorization header');
+  // Next.js sometimes lowercases headers
+  const authHeader =
+    request.headers.get("authorization") ||
+    request.headers.get("Authorization");
+
+  if (!authHeader) {
+    throw new Error("Authorization header missing");
   }
 
-  const token = authHeader.substring(7);
-  
+  // Normalize casing
+  const lower = authHeader.toLowerCase();
+
+  if (!lower.startsWith("bearer ")) {
+    throw new Error("Invalid authorization header");
+  }
+
+  // Extract token safely
+  const token = authHeader.split(" ")[1];
+  if (!token) {
+    throw new Error("Missing token");
+  }
+
   try {
-    const decoded = verify(token, JWT_SECRET!) as AuthUser;
+    const decoded = verify(token, JWT_SECRET as string) as unknown as AuthUser;
     return decoded;
-  } catch (error) {
-    throw new Error('Invalid or expired token');
+  } catch (err) {
+    console.error("JWT VERIFY ERROR:", err);
+    throw new Error("Invalid or expired token");
   }
 }
 

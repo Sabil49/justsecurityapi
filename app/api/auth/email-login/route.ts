@@ -153,6 +153,16 @@ export async function POST(request: NextRequest) {
       { expiresIn: '7d' }
     );
 
+    //create refresh token
+    const refreshToken = sign(
+      {
+        userId: user.id,
+        email: user.email,
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
     // Log telemetry
     await prisma.telemetryLog.create({
       data: {
@@ -170,6 +180,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         token,
+        refreshToken,
         user: {
           id: user.id,
           email: user.email,
