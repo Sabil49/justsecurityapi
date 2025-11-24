@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate --no-engine"
   },
   "prisma": {
     "seed": "node prisma/seed.ts"
