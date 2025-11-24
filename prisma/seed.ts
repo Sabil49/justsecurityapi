@@ -112,7 +112,7 @@ async function main() {
       severity: ThreatSeverity.MEDIUM,
       category: ThreatCategory.ADWARE,
       description: "Annoying popup adware.",
-      metadata: { info: "initial seed" } as InputJsonValue | undefined
+      metadata: { info: "initial seed" }
     }
   });
 
