@@ -18,7 +18,12 @@ const RegisterDeviceSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyAuth(request);
-    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     // Rate limit: 10 requests per minute per user
     const { success } = await rateLimit(`device_register:${user.userId}`, 10, 60);
     if (!success) {

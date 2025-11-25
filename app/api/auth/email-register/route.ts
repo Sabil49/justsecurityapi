@@ -87,16 +87,6 @@ export async function POST(request: NextRequest) {
       return { user, device, subscription };
     });
 
-    // Create JWT token
-    const token = sign(
-      {
-        userId: user.id,
-        email: user.email,
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
     // Log telemetry
     try {
       await prisma.telemetryLog.create({
@@ -119,7 +109,6 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         data: {
-          token,
           user: {
             id: user.id,
             email: user.email,
