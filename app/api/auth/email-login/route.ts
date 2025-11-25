@@ -21,7 +21,7 @@ const EmailLoginSchema = z.object({
   deviceInfo: z.object({
     deviceId: z.string(),
     deviceName: z.string(),
-    platform: z.enum(['ios', 'android']),
+    platform: z.string(),
     osVersion: z.string(),
     appVersion: z.string(),
   }),
