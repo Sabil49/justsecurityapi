@@ -16,8 +16,8 @@ if (!JWT_SECRET) {
 }
 
 const EmailLoginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password required'),
+  email: z.string().email({ message: 'Invalid email address' }),
+  password: z.string().min(1, { message: 'Password required' }),
   deviceInfo: z.object({
     deviceId: z.string(),
     deviceName: z.string(),

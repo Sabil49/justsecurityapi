@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
           platform: validated.deviceInfo.platform as 'ANDROID',
           osVersion: validated.deviceInfo.osVersion,
           appVersion: validated.deviceInfo.appVersion,
+          lastSeen: new Date(),
         },
       });
 
