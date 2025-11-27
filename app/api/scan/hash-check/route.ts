@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // Verify device belongs to user
     const device = await prisma.device.findFirst({
       where: {
-        id: validated.deviceId,
+        deviceId: validated.deviceId,
         userId: user.userId,
       },
     });
