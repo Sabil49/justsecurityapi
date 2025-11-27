@@ -30,7 +30,7 @@ interface ThreatResult {
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyAuth(request);
-    
+    console.log('Authenticated user:', user);
     // Rate limit: 50 requests per minute per user
     const { success } = await rateLimit(`hash_check:${user.userId}`, 50, 60);
     if (!success) {
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
-
+    console.log('Rate limit check passed');
     const body = await request.json();
     const validated = HashCheckSchema.parse(body);
-
+    console.log('Request body validated:', validated);
     // Verify device belongs to user
     const device = await prisma.device.findFirst({
       where: {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         userId: user.userId,
       },
     });
-
+    console.log('Device lookup result:', device);
     if (!device) {
       return NextResponse.json(
         { success: false, error: 'Device not found' },
@@ -68,8 +68,10 @@ export async function POST(request: NextRequest) {
       
       validated.hashes.forEach((hash, index) => {
         if (cachedResults[index]) {
+          console.log(`Cache hit for hash: ${hash}`);
           results.push(cachedResults[index]);
         } else {
+          console.log(`Cache miss for hash: ${hash}`);
           uncachedHashes.push(hash);
         }
       });
@@ -86,6 +88,8 @@ export async function POST(request: NextRequest) {
         category?: string | null;
       };
 
+      console.log('Querying database for uncached hashes:', uncachedHashes);
+
       const threats = await prisma.threatSignature.findMany({
         where: {
           signature: { in: uncachedHashes },
@@ -99,6 +103,8 @@ export async function POST(request: NextRequest) {
           category: true,
         },
       }) as ThreatRow[];
+
+      console.log('Database query results:', threats);
 
       const threatMap = new Map<string, ThreatRow>(
         threats.map((t) => [t.signature, t])
@@ -120,13 +126,13 @@ export async function POST(request: NextRequest) {
             };
 
         results.push(result);
-
+        console.log(`Processed hash: ${hash}, result:`, result);
         // Cache result for 1 hour (store as JSON string)
          pipeline.setex(`threat:${hash}`, 3600, JSON.stringify(result));
     }
 
     await pipeline.exec();
-
+    console.log('Cache updated for uncached hashes');
     // Log scan activity
     const threatsFound = results.filter(r => r.isThreat).length;
     
@@ -156,14 +162,14 @@ export async function POST(request: NextRequest) {
  }
  catch (error) {
     console.error('[HASH_CHECK_ERROR]', error);
-    
+    console.log('Error details:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Invalid request data' },
         { status: 400 }
       );
     }
-
+    console.log('Unhandled error:', error);
     return NextResponse.json(
       { success: false, error: 'Hash check failed' },
       { status: 500 }
