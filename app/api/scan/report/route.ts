@@ -11,8 +11,8 @@ const ScanReportSchema = z.object({
   status: z.enum(['completed', 'failed', 'cancelled']),
   filesScanned: z.number().int().min(0),
   threatsFound: z.number().int().min(0),
-  startedAt: z.string().datetime(),
-  completedAt: z.string().datetime().optional(),
+  startedAt: z.iso.datetime(),
+  completedAt: z.iso.datetime().optional(),
   threats: z
     .array(
       z.object({
