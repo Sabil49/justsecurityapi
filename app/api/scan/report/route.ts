@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAuth } from '@/lib/auth';
 import { randomUUID } from 'crypto';
 
+
 const ScanReportSchema = z.object({
   deviceId: z.string(),
   scanType: z.enum(['quick', 'full', 'custom']),
@@ -25,10 +26,11 @@ const ScanReportSchema = z.object({
     )
     .optional(),
 });
-
+console.log('ScanReportSchema defined:', ScanReportSchema);
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyAuth(request);
+    console.log('Authenticated user:', user);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -37,28 +39,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('Request body:', body);
     const validated = ScanReportSchema.parse(body);
-
+    console.log('Request body validated:', validated);
     // Verify device ownership
     const device = await prisma.device.findFirst({
       where: {
-        id: validated.deviceId,
+        deviceId: validated.deviceId,
         userId: user.userId,
       },
     });
-
+    console.log('Device lookup result:', device);
     if (!device) {
       return NextResponse.json(
         { success: false, error: 'Device not found' },
         { status: 404 }
       );
     }
-
+    console.log('Device lookup result:', device);
     const startedAt = new Date(validated.startedAt);
     const completedAt = validated.completedAt
       ? new Date(validated.completedAt)
       : new Date();
-
+    
     if (startedAt > completedAt) {
       return NextResponse.json(
         {
@@ -68,9 +71,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    console.log('Timestamp validation passed:', { startedAt, completedAt });
 
     const duration = completedAt.getTime() - startedAt.getTime();
-
+    console.log('Calculated scan duration (ms):', duration);
     // Create scan log + quarantine + telemetry
     const scanLog = await prisma.$transaction(async (tx) => {
       const scanLog = await tx.scanLog.create({
@@ -90,7 +94,7 @@ export async function POST(request: NextRequest) {
             : undefined,
         },
       });
-
+      console.log('Scan log created:', scanLog);
       // If threats exist → save to quarantine
       if (validated.threats && validated.threats.length > 0) {
         await tx.quarantine.createMany({
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
           })),
         });
       }
-
+      console.log('Quarantine entries created for threats');
       // Always log telemetry
       await tx.telemetryLog.create({
         data: {
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
           },
         },
       });
-
+      console.log('Telemetry log created for scan completion');
       return scanLog;
     });
 
@@ -137,17 +141,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[SCAN_REPORT_ERROR]', error);
-
+    console.log('Error details:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Invalid request data' },
         { status: 400 }
       );
     }
-
+    console.log('Unhandled error:', error);
     return NextResponse.json(
       { success: false, error: 'Scan report failed' },
       { status: 500 }
     );
+    console.log('Unhandled error:', error);
   }
 }
