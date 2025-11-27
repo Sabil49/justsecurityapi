@@ -1,3 +1,4 @@
+"use server";
 // app/api/breach/details/[name]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/lib/auth';
