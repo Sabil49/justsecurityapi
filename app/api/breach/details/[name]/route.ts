@@ -1,31 +1,33 @@
 "use server";
-// app/api/breach/details/[name]/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
+
+import { NextRequest, NextResponse } from "next/server";
+import { verifyAuth } from "@/lib/auth";
 
 const HIBP_API_KEY = process.env.HIBP_API_KEY!;
-const HIBP_API = 'https://haveibeenpwned.com/api/v3';
+const HIBP_API = "https://haveibeenpwned.com/api/v3";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { name: string } }
+  context: { params: Promise<{ name: string }> }
 ) {
   try {
     await verifyAuth(request);
 
-    const breachName = params.name;
+    const { name } = await context.params;
 
-    // Call HIBP API for breach details
-    const response = await fetch(`${HIBP_API}/breach/${encodeURIComponent(breachName)}`, {
-      headers: {
-        'hibp-api-key': HIBP_API_KEY,
-        'user-agent': 'AVG-Antivirus-App',
-      },
-    });
+    const response = await fetch(
+      `${HIBP_API}/breach/${encodeURIComponent(name)}`,
+      {
+        headers: {
+          "hibp-api-key": HIBP_API_KEY,
+          "user-agent": "AVG-Antivirus-App",
+        },
+      }
+    );
 
     if (response.status === 404) {
       return NextResponse.json(
-        { success: false, error: 'Breach not found' },
+        { success: false, error: "Breach not found" },
         { status: 404 }
       );
     }
@@ -41,10 +43,10 @@ export async function GET(
       data: { breach },
     });
   } catch (error) {
-    console.error('[GET_BREACH_DETAILS_ERROR]', error);
+    console.error("[GET_BREACH_DETAILS_ERROR]", error);
 
     return NextResponse.json(
-      { success: false, error: 'Failed to get breach details' },
+      { success: false, error: "Failed to get breach details" },
       { status: 500 }
     );
   }
