@@ -108,7 +108,7 @@ model User {
   passwordHash   String? // For email auth
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-
+  role      String?     @default("user") // add this line
   devices         Device[]
   subscriptions   Subscription[]
   telemetryLogs   TelemetryLog[]
