@@ -26,6 +26,80 @@ const VerifySchema = z.object({
   }),
 });
 
+const googleClient = new OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID);
+
+// Apple JWKS client
+const appleKeys = jwksClient({
+  jwksUri: 'https://appleid.apple.com/auth/keys',
+});
+
+// Helper: get Apple signing key
+function getAppleSigningKey(header: jwt.JwtHeader, callback: (err: Error | null, key?: string) => void) {
+  appleKeys.getSigningKey(header.kid as string, (err, key) => {
+    if (err) return callback(err);
+    const signingKey = key?.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
+async function verifyGoogleToken(idToken: string): Promise<VerifiedIdentity> {
+  const ticket = await googleClient.verifyIdToken({
+    idToken,
+    audience: process.env.GOOGLE_OAUTH_CLIENT_ID,
+  });
+
+  const payload = ticket.getPayload();
+
+  if (!payload?.email) {
+    throw new Error('Google token verification failed');
+  }
+
+  return {
+    email: payload.email,
+    providerId: payload.sub,
+    name: payload.name ?? null,
+  };
+}
+
+interface AppleTokenPayload {
+  email?: string;
+  sub: string;
+  name?: string;
+}
+
+async function verifyAppleToken(idToken: string): Promise<VerifiedIdentity> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(
+      idToken,
+      getAppleSigningKey,
+      {
+        algorithms: ['RS256'],
+        issuer: 'https://appleid.apple.com',
+      },
+      (err, decoded) => {
+        if (err) return reject(new Error('Invalid Apple ID token'));
+
+        const payload = decoded as AppleTokenPayload;
+        resolve({
+          email: payload.email ?? null,
+          providerId: payload.sub,
+          name: payload.name ?? null,
+        });
+      }
+    );
+  });
+}
+
+async function verifyProviderToken(
+  token: string,
+  provider: 'google' | 'apple'
+): Promise<VerifiedIdentity> {
+  if (provider === 'google') return await verifyGoogleToken(token);
+  if (provider === 'apple') return await verifyAppleToken(token);
+
+  throw new Error('Unsupported provider');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -230,78 +304,4 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
-}
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID);
-
-// Apple JWKS client
-const appleKeys = jwksClient({
-  jwksUri: 'https://appleid.apple.com/auth/keys',
-});
-
-// Helper: get Apple signing key
-function getAppleSigningKey(header: jwt.JwtHeader, callback: (err: Error | null, key?: string) => void) {
-  appleKeys.getSigningKey(header.kid as string, (err, key) => {
-    if (err) return callback(err);
-    const signingKey = key?.getPublicKey();
-    callback(null, signingKey);
-  });
-}
-
-async function verifyGoogleToken(idToken: string): Promise<VerifiedIdentity> {
-  const ticket = await googleClient.verifyIdToken({
-    idToken,
-    audience: process.env.GOOGLE_OAUTH_CLIENT_ID,
-  });
-
-  const payload = ticket.getPayload();
-
-  if (!payload?.email) {
-    throw new Error('Google token verification failed');
-  }
-
-  return {
-    email: payload.email,
-    providerId: payload.sub,
-    name: payload.name ?? null,
-  };
-}
-
-interface AppleTokenPayload {
-  email?: string;
-  sub: string;
-  name?: string;
-}
-
-async function verifyAppleToken(idToken: string): Promise<VerifiedIdentity> {
-  return new Promise((resolve, reject) => {
-    jwt.verify(
-      idToken,
-      getAppleSigningKey,
-      {
-        algorithms: ['RS256'],
-        issuer: 'https://appleid.apple.com',
-      },
-      (err, decoded) => {
-        if (err) return reject(new Error('Invalid Apple ID token'));
-
-        const payload = decoded as AppleTokenPayload;
-        resolve({
-          email: payload.email ?? null,
-          providerId: payload.sub,
-          name: payload.name ?? null,
-        });
-      }
-    );
-  });
-}
-
-export async function verifyProviderToken(
-  token: string,
-  provider: 'google' | 'apple'
-): Promise<VerifiedIdentity> {
-  if (provider === 'google') return await verifyGoogleToken(token);
-  if (provider === 'apple') return await verifyAppleToken(token);
-
-  throw new Error('Unsupported provider');
 }
