@@ -50,49 +50,49 @@ export async function POST(request: NextRequest) {
       );
     }
     if (!verificationResult.expiryDate) {
-    throw new Error('Subscription expiry date not available from receipt verification');
+      throw new Error('Subscription expiry date not available from receipt verification');
     } 
     // Calculate subscription period
     const now = new Date();
     const periodEnd = new Date(verificationResult.expiryDate);
 
-    const subscription = await prisma.$transaction(async (tx: Parameters<typeof prisma.$transaction>[0]) => {
-  // Check if subscription exists
-  const existing = await tx.subscription.findUnique({
-    where: { platformSubId: verificationResult.subscriptionId },
-  });
-  
-  if (existing && existing.userId !== user.userId) {
-    throw new Error('Subscription belongs to different user');
-  }
-  
-  return tx.subscription.upsert({
-    where: { platformSubId: verificationResult.subscriptionId },
-    update: {
-      status: 'active',
-      tier: 'premium',
-      currentPeriodStart: now,
-      currentPeriodEnd: periodEnd,
-      receiptData: validated.receiptData,
-      updatedAt: now,
-    },
-    create: {
-      userId: user.userId,
-      tier: 'premium',
-      status: 'active',
-      platform: validated.platform,
-      platformSubId: verificationResult.subscriptionId,
-      receiptData: validated.receiptData,
-      currentPeriodStart: now,
-      currentPeriodEnd: periodEnd,
-    },
-  });
-});
+    const subscription = await prisma.$transaction(async (tx) => {
+      // Check if subscription exists
+      const existing = await tx.subscription.findUnique({
+        where: { platformSubId: verificationResult.subscriptionId },
+      });
+      
+      if (existing && existing.userId !== user.userId) {
+        throw new Error('Subscription belongs to different user');
+      }
+      
+      return tx.subscription.upsert({
+        where: { platformSubId: verificationResult.subscriptionId },
+        update: {
+          status: 'active',
+          tier: 'premium',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          receiptData: validated.receiptData,
+          updatedAt: now,
+        },
+        create: {
+          userId: user.userId,
+          tier: 'premium',
+          status: 'active',
+          platform: validated.platform,
+          platformSubId: verificationResult.subscriptionId,
+          receiptData: validated.receiptData,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        },
+      });
+    });
     
     // Verify the subscription belongs to the authenticated user
     if (subscription.userId !== user.userId) {
-     throw new Error('Subscription ownership mismatch');
-   }
+      throw new Error('Subscription ownership mismatch');
+    }
 
     // Log telemetry (non-blocking)
     try {
@@ -167,12 +167,11 @@ async function verifyAppleReceipt(receiptData: string): Promise<VerificationResu
       // Receipt is from sandbox but sent to production
       const sandboxUrl = 'https://sandbox.itunes.apple.com/verifyReceipt';
       
-            const sandboxController = new AbortController();
+      const sandboxController = new AbortController();
       const sandboxTimeoutId = setTimeout(() => sandboxController.abort(), 10000);
       
       try {
-      
-      const sandboxResponse = await fetch(sandboxUrl, {
+        const sandboxResponse = await fetch(sandboxUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -183,8 +182,8 @@ async function verifyAppleReceipt(receiptData: string): Promise<VerificationResu
         });
         const sandboxData = await sandboxResponse.json();
         const latestReceipt = sandboxData.latest_receipt_info?.reduce((latest: AppleReceiptInfo, current: AppleReceiptInfo) => {
-        const latestExpiry = parseInt(latest.expires_date_ms || '0', 10);
-        const currentExpiry = parseInt(current.expires_date_ms || '0', 10);
+          const latestExpiry = parseInt(latest.expires_date_ms || '0', 10);
+          const currentExpiry = parseInt(current.expires_date_ms || '0', 10);
           return currentExpiry > latestExpiry ? current : latest;
         });
         return {
@@ -203,8 +202,8 @@ async function verifyAppleReceipt(receiptData: string): Promise<VerificationResu
       valid: data.status === 0,
       subscriptionId: data.receipt?.original_transaction_id || '',
       expiryDate: data.latest_receipt_info?.[0]?.expires_date_ms 
-      ? parseInt(data.latest_receipt_info[0].expires_date_ms, 10)
-      : undefined,
+        ? parseInt(data.latest_receipt_info[0].expires_date_ms, 10)
+        : undefined,
     };
   } catch (error) {
     console.error('[APPLE_VERIFY_ERROR]', error);
@@ -216,7 +215,6 @@ async function verifyAppleReceipt(receiptData: string): Promise<VerificationResu
 
 async function verifyGoogleReceipt(receiptData: string): Promise<VerificationResult> {
   try {
-    
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
     const packageName = process.env.ANDROID_PACKAGE_NAME;
@@ -240,7 +238,7 @@ async function verifyGoogleReceipt(receiptData: string): Promise<VerificationRes
     const receipt = JSON.parse(receiptData);
       
     if (!receipt.productId || !receipt.purchaseToken) {
-     throw new Error('Invalid receipt format: missing required fields');
+      throw new Error('Invalid receipt format: missing required fields');
     }
     const result = await androidPublisher.purchases.subscriptions.get({
       packageName: packageName,
