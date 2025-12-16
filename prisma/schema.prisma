@@ -78,8 +78,6 @@ enum AdminAction {
  * ===========================
  */
 
-// Add to your prisma/schema.prisma file
-
 model MonitoredEmail {
   id          String   @id @default(cuid())
   userId      String
@@ -98,25 +96,28 @@ model MonitoredEmail {
   @@index([isMonitored])
 }
 
-// Update User model to include relation:
+// Updated User model with anonymous support
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String    @id @default(cuid())
+  email          String?   @unique // Changed: nullable for anonymous users
   name           String?
   authProvider   String
   authProviderId String?
-  passwordHash   String? // For email auth
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  role      String?     @default("user") // add this line
+  passwordHash   String?   // For email auth
+  isAnonymous    Boolean   @default(false) // NEW: Track anonymous users
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  role           String?   @default("user")
+  
   devices         Device[]
   subscriptions   Subscription[]
   telemetryLogs   TelemetryLog[]
-  monitoredEmails MonitoredEmail[] // Add this line
+  monitoredEmails MonitoredEmail[]
   adminAuditLogs  AdminAuditLog[]
 
   @@index([email])
   @@index([authProviderId])
+  @@index([isAnonymous]) // NEW: Index for querying anonymous users
 }
 
 model Device {
