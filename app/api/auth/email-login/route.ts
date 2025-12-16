@@ -4,9 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
-// @ts-expect-error - missing type declarations for @upstash/ratelimit in this project
 import { Ratelimit } from '@upstash/ratelimit';
-// @ts-expect-error - missing type declarations for @upstash/redis in this project
 import { Redis } from '@upstash/redis';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -16,7 +14,7 @@ if (!JWT_SECRET) {
 }
 
 const EmailLoginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address' }),
+  email: z.email({ message: 'Invalid email address' }),
   password: z.string().min(1, { message: 'Password required' }),
   deviceInfo: z.object({
     deviceId: z.string(),
