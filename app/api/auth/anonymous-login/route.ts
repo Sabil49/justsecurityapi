@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = AnonymousLoginSchema.parse(body);
 
-    // Find device with anonymous user
+    // Find device
     const device = await prisma.device.findUnique({
       where: { deviceId: validated.deviceInfo.deviceId },
       include: {
@@ -35,62 +35,153 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!device || !device.user.isAnonymous) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Anonymous user not found',
-        },
-        { status: 404 }
-      );
-    }
+    let user, updatedDevice, subscription;
 
-    const user = device.user;
+    if (!device) {
+      // Device doesn't exist - create new anonymous user
+      console.log('[ANONYMOUS_LOGIN] Device not found, creating new anonymous user');
+      
+      const result = await prisma.$transaction(async (tx) => {
+        // Create anonymous user
+        const user = await tx.user.create({
+          data: {
+            email: null,
+            name: `Guest-${validated.deviceInfo.deviceId.slice(0, 8)}`,
+            authProvider: 'anonymous',
+            passwordHash: null,
+            isAnonymous: true,
+          },
+        });
 
-    // Update device last seen
-    await prisma.device.update({
-      where: { id: device.id },
-      data: {
-        lastSeen: new Date(),
-        osVersion: validated.deviceInfo.osVersion,
-        appVersion: validated.deviceInfo.appVersion,
-      },
-    });
+        // Create device
+        const device = await tx.device.create({
+          data: {
+            userId: user.id,
+            deviceId: validated.deviceInfo.deviceId,
+            deviceName: validated.deviceInfo.deviceName,
+            platform: validated.deviceInfo.platform,
+            osVersion: validated.deviceInfo.osVersion,
+            appVersion: validated.deviceInfo.appVersion,
+            lastSeen: new Date(),
+          },
+        });
 
-    // Update user last activity
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { updatedAt: new Date() },
-    });
+        // Create free trial subscription
+        const subscription = await tx.subscription.create({
+          data: {
+            userId: user.id,
+            tier: 'free',
+            status: 'trial',
+            platform: validated.deviceInfo.platform,
+            trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        });
 
-    // Get subscription
-    let subscription = await prisma.subscription.findFirst({
-      where: {
-        userId: user.id,
-        status: { in: ['active', 'trial'] },
-      },
-    });
+        return { user, device, subscription };
+      });
 
-    if (!subscription) {
-      // Create free trial if none exists
-      subscription = await prisma.subscription.create({
+      user = result.user;
+      updatedDevice = result.device;
+      subscription = result.subscription;
+      
+    } else if (device.user.isAnonymous) {
+      // Device has anonymous user - return existing session
+      console.log('[ANONYMOUS_LOGIN] Anonymous user found:', device.userId);
+      
+      user = device.user;
+
+      // Update device last seen
+      updatedDevice = await prisma.device.update({
+        where: { id: device.id },
         data: {
-          userId: user.id,
-          tier: 'free',
-          status: 'trial',
-          platform: validated.deviceInfo.platform,
-          trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          lastSeen: new Date(),
+          osVersion: validated.deviceInfo.osVersion,
+          appVersion: validated.deviceInfo.appVersion,
         },
       });
+
+      // Update user last activity
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { updatedAt: new Date() },
+      });
+
+      // Get subscription
+      subscription = await prisma.subscription.findFirst({
+        where: {
+          userId: user.id,
+          status: { in: ['active', 'trial'] },
+        },
+      });
+
+      if (!subscription) {
+        // Create free trial if none exists
+        subscription = await prisma.subscription.create({
+          data: {
+            userId: user.id,
+            tier: 'free',
+            status: 'trial',
+            platform: validated.deviceInfo.platform,
+            trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+      
+    } else {
+      // Device has registered user - return that session
+      console.log('[ANONYMOUS_LOGIN] Device belongs to registered user:', device.userId);
+      
+      user = device.user;
+
+      // Update device last seen
+      updatedDevice = await prisma.device.update({
+        where: { id: device.id },
+        data: {
+          lastSeen: new Date(),
+          osVersion: validated.deviceInfo.osVersion,
+          appVersion: validated.deviceInfo.appVersion,
+        },
+      });
+
+      // Update user last activity
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { updatedAt: new Date() },
+      });
+
+      // Get subscription
+      subscription = await prisma.subscription.findFirst({
+        where: {
+          userId: user.id,
+          status: { in: ['active', 'trial'] },
+        },
+      });
+
+      if (!subscription) {
+        // Create free trial if none exists
+        subscription = await prisma.subscription.create({
+          data: {
+            userId: user.id,
+            tier: 'free',
+            status: 'trial',
+            platform: validated.deviceInfo.platform,
+            trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
     }
 
     // Create JWT tokens
     const token = sign(
       {
         userId: user.id,
-        isAnonymous: true,
+        isAnonymous: user.isAnonymous,
         deviceId: validated.deviceInfo.deviceId,
       },
       JWT_SECRET,
@@ -100,7 +191,7 @@ export async function POST(request: NextRequest) {
     const refreshToken = sign(
       {
         userId: user.id,
-        isAnonymous: true,
+        isAnonymous: user.isAnonymous,
       },
       JWT_SECRET,
       { expiresIn: '90d' }
@@ -111,10 +202,11 @@ export async function POST(request: NextRequest) {
       await prisma.telemetryLog.create({
         data: {
           userId: user.id,
-          eventType: 'anonymous_login',
+          eventType: user.isAnonymous ? 'anonymous_login' : 'registered_login',
           eventData: {
-            deviceId: device.id,
+            deviceId: updatedDevice.id,
             platform: validated.deviceInfo.platform,
+            wasNewDevice: !device,
             timestamp: new Date().toISOString(),
           },
         },
@@ -125,7 +217,8 @@ export async function POST(request: NextRequest) {
 
     console.log('[ANONYMOUS_LOGIN] Success:', {
       userId: user.id,
-      deviceId: device.deviceId,
+      deviceId: updatedDevice.deviceId,
+      isAnonymous: user.isAnonymous,
     });
 
     return NextResponse.json({
@@ -134,13 +227,14 @@ export async function POST(request: NextRequest) {
         token,
         refreshToken,
         userId: user.id,
-        isAnonymous: true,
+        isAnonymous: user.isAnonymous,
         user: {
           id: user.id,
           name: user.name,
+          email: user.email,
         },
         device: {
-          id: device.id,
+          id: updatedDevice.id,
         },
         subscription: {
           tier: subscription.tier,
