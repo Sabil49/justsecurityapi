@@ -45,7 +45,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthUser> {
   }
 }
 
-export function createAuthToken(userId: string, email?: string): string {
+export function createAuthToken(userId: string, email: string | null): string {
   const token = sign(
     { userId, email },
     JWT_SECRET!,
