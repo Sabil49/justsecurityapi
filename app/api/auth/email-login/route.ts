@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
-// @ts-ignore - missing type declarations for @upstash/ratelimit in this project
+// @ts-expect-error - missing type declarations for @upstash/ratelimit in this project
 import { Ratelimit } from '@upstash/ratelimit';
-// @ts-ignore - missing type declarations for @upstash/redis in this project
+// @ts-expect-error - missing type declarations for @upstash/redis in this project
 import { Redis } from '@upstash/redis';
 
 const JWT_SECRET = process.env.JWT_SECRET!;

@@ -146,7 +146,7 @@ async function sendPushNotification(
     ring: 'Ring request',
     lock: 'Lock request',
     wipe: 'Wipe request',
-  } as any;
+  } as const satisfies Record<typeof commandType, string>;
 
   const title = titles[commandType] ?? 'Device command';
   const bodyParts: string[] = [];

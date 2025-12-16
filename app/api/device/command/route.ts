@@ -126,10 +126,10 @@ export async function POST(request: NextRequest) {
 
         try {
       return await admin.messaging().send(message);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Deactivate invalid tokens
-      if (error?.code === 'messaging/invalid-registration-token' || 
-          error?.code === 'messaging/registration-token-not-registered') {
+      if (error instanceof Error && 'code' in error && (error.code === 'messaging/invalid-registration-token' || 
+          error.code === 'messaging/registration-token-not-registered')) {
         await prisma.pushToken.update({
           where: { id: pushToken.id },
           data: { isActive: false },
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    const successfulPushes = pushResults.filter(r => r.status === 'fulfilled').length;
+    const successfulPushes = pushResults.filter((r: PromiseSettledResult<string>) => r.status === 'fulfilled').length;
 
     if (successfulPushes > 0) {
       await prisma.antiTheftCommand.update({

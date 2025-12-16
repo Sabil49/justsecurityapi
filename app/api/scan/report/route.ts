@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         scanLogId: scanLog.id,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[SCAN_REPORT_ERROR]', error);
     console.log('Error details:', error);
     if (error instanceof z.ZodError) {
@@ -153,6 +153,5 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Scan report failed' },
       { status: 500 }
     );
-    console.log('Unhandled error:', error);
   }
 }

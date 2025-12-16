@@ -18,6 +18,10 @@ interface VerificationResult {
   expiryDate?: number;
 }
 
+interface AppleReceiptInfo {
+  expires_date_ms: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await verifyAuth(request);
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const periodEnd = new Date(verificationResult.expiryDate);
 
-    const subscription = await prisma.$transaction(async (tx) => {
+    const subscription = await prisma.$transaction(async (tx: Parameters<typeof prisma.$transaction>[0]) => {
   // Check if subscription exists
   const existing = await tx.subscription.findUnique({
     where: { platformSubId: verificationResult.subscriptionId },
@@ -178,7 +182,7 @@ async function verifyAppleReceipt(receiptData: string): Promise<VerificationResu
           signal: sandboxController.signal,
         });
         const sandboxData = await sandboxResponse.json();
-        const latestReceipt = sandboxData.latest_receipt_info?.reduce((latest: any, current: any) => {
+        const latestReceipt = sandboxData.latest_receipt_info?.reduce((latest: AppleReceiptInfo, current: AppleReceiptInfo) => {
         const latestExpiry = parseInt(latest.expires_date_ms || '0', 10);
         const currentExpiry = parseInt(current.expires_date_ms || '0', 10);
           return currentExpiry > latestExpiry ? current : latest;

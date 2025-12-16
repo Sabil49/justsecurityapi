@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     const { deviceId } = body;
 
     // Get subscription for specific device (optional)
-    let whereClause: any = { userId: user.userId };
+    const whereClause: { userId: string; deviceId?: string } = { userId: user.userId };
 
     if (deviceId) {
       const device = await prisma.device.findFirst({
