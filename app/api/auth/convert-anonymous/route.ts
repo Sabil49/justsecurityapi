@@ -13,8 +13,8 @@ if (!JWT_SECRET) {
 }
 
 const ConvertAnonymousSchema = z.object({
-  anonymousUserId: z.string().uuid(),
-  email: z.string().email('Invalid email address'),
+  anonymousUserId: z.uuid(),
+  email: z.email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
 });
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
-
+    // Ensure the user is indeed anonymous
     if (!anonymousUser.isAnonymous) {
       return NextResponse.json(
         {
