@@ -13,8 +13,8 @@ if (!JWT_SECRET) {
 }
 
 const ConvertAnonymousSchema = z.object({
-  anonymousUserId: z.uuid(),
-  email: z.email('Invalid email address'),
+  anonymousUserId: z.string().min(1, 'User ID is required'),
+  email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
 });
